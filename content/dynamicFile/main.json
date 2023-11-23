@@ -1,0 +1,6 @@
+{
+    "aws":{
+        "source":"aws-s3.service.ts",
+        "destination":"src/shared/services/"
+    }
+}

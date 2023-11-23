@@ -1,0 +1,119 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: nestjs-base-project  
+  title: Nest.js Template V1
+  description: Create an Backend APP powered with Nest.js
+  tags:
+    - nestjs
+    - typescript
+    - postgres
+    - typeorm
+    - s3bucket
+spec:
+  owner: ashish.r@mantralabsglobal.com
+  type: backendApp
+  parameters:
+    - title: Provide project information
+      required:
+        - component_id
+        - owner
+        - npm_packages
+      properties:
+        component_id:
+          title: Name
+          type: string
+          description: App Name
+          ui:field: EntityNamePicker
+        description:
+          title: Description
+          type: string
+          description: Help others understand what this app is for.
+        npm_packages:
+          title: NPM Packages to Install
+          type: object
+          properties:
+            aws:
+              title: aws-sdk
+              type: boolean
+            lodash:
+              title: Lodash
+              type: boolean
+            axios:
+              title: Axios
+              type: boolean
+            moment:
+              title: Moment.js
+              type: boolean
+            bodyparser:
+              title: Body Parser
+              type: boolean
+        owner:
+          title: Owner
+          type: string
+          description: Owner of the component
+          ui:field: OwnerPicker
+          ui:options:
+            allowedKinds:
+              - Group
+    - title: Choose a location
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+  steps:
+
+
+    - id: template
+      name: Fetch Skeleton + Template
+      action: fetch:template
+      input:
+        url: ./content
+        copyWithoutRender:
+          - .github/workflows/*
+        values:
+          component_id: ${{ parameters.component_id }}
+          description: ${{ parameters.description }}
+          destination: ${{ parameters.repoUrl | parseRepoUrl }}
+          owner: ${{ parameters.owner }}
+          # expressjs: ${{ parameters.npm_packages.expressjs }}
+          # lodash: ${{ parameters.npm_packages.lodash }}
+          # axios: ${{ parameters.npm_packages.axios }}
+          # moment: ${{ parameters.npm_packages.moment }}
+          # bodyparser: ${{ parameters.npm_packages.bodyparser }}
+      
+    - id: sync
+      name: Sync File
+      action: js:file:sync
+      input:
+        packages: ${{parameters.npm_packages}}
+        syncFolder: dynamicFile
+        logicFile: main.json
+    - id: publish
+      name: Publish
+      action: publish:github
+      input:
+        allowedHosts: ["github.com"]
+        description: This is ${{ parameters.component_id }}
+        repoUrl: ${{ parameters.repoUrl }}
+
+    - id: register
+      name: Register
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: "/catalog-info.yaml"
+
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}
